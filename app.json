@@ -1,5 +1,10 @@
 {
   "android": {
     "package": "com.anonymous.scrimbaprojects"
+  },
+  "extra": {
+    "eas": {
+      "projectId": "b2746fa0-8a29-4b57-85e7-aec67ec1b8be"
+    }
   }
 }

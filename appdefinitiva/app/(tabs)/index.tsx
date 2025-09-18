@@ -105,16 +105,21 @@ const scheme = useColorScheme();
     }
   }
 
-  async function sendNotification(){
-    await Notifications.scheduleNotificationAsync({
-      content:{
-        title: "Remember do drink water",
-        body: "Never forget to drink at least 2 liters of water a day",
-        data: {data: 'Something just for fun'}
-      },
-      trigger: null,
-    })
-  }
+  async function sendNotification() {
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: "Remember to drink water",
+      body: "Never forget to drink at least 2 liters of water a day",
+      data: { data: 'Something just for fun' },
+    },
+    trigger: {
+      type: 'timeInterval',
+      seconds: 1,   // dispara praticamente imediatamente
+      repeats: false,
+    } as Notifications.TimeIntervalTriggerInput,
+  });
+}
+
 
   async function scheduleNotification() {
     await Notifications.scheduleNotificationAsync({

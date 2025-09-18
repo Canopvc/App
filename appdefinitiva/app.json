@@ -10,8 +10,16 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "infoPlist":{
-        "NSMotionUsageDescription": "This app requires access to motion sensors for enhanced user experience."
+      "bundleIdentifier": "com.mimero.appdefinitiva",
+      "buildNumber": "1.0.0",
+      "infoPlist": {
+        "NSMotionUsageDescription": "This app requires access to motion sensors for enhanced user experience.",
+        "UIBackgroundModes": [],
+        "UIViewControllerBasedStatusBarAppearance": true,
+        "UIRequiresFullScreen": true
+      },
+      "config": {
+        "usesNonExemptEncryption": false
       }
     },
     "android": {
