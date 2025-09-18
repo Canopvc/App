@@ -40,13 +40,16 @@ export default function AuthScreen() {
     setLoading(true);
     setError('');
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        setError(error.message);
-        setLoading(false);
-        return;
-      }
-      router.replace('/(tabs)'); // Redireciona para a tela principal após login
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+if (error) {
+  setError(error.message);
+  setLoading(false);
+  return;
+}
+if (data.session) {
+  await AsyncStorage.setItem('authToken', data.session.access_token);
+}
+router.replace('/(tabs)'); // Redireciona para a tela principal após login
     } catch (e) {
       setError('Erro inesperado ao fazer login.');
     } finally {
@@ -57,6 +60,8 @@ export default function AuthScreen() {
   const handleLogout = async () => {
     setLoading(true);
     await supabase.auth.signOut();
+    await AsyncStorage.removeItem('authToken');
+
     setLoading(false);
   };
 
