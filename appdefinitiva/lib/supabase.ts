@@ -10,6 +10,10 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 // Configuração condicional baseada na plataforma
 const supabaseConfig = {
   auth: {
+    // Persist session and refresh tokens automatically
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: false,
     // Usa AsyncStorage apenas em dispositivos móveis (Android/iOS)
     // No web, não especifica storage para usar localStorage padrão
     ...(Platform.OS !== 'web' && { storage: AsyncStorage }),

@@ -1,43 +1,51 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
-import { useColorScheme } from '@/hooks/useColorScheme';
-import { useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect, useState, useCallback } from "react";
+import { Slot, useRouter, useSegments } from "expo-router";
+import { supabase } from "../lib/supabase";
+import { View, ActivityIndicator } from "react-native";
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
-
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+  const segments = useSegments();
 
   useEffect(() => {
-    const checkLogin = async () => {
-      const token = await AsyncStorage.getItem('authToken');
-      setIsLoggedIn(!!token); // true se existir token
-    };
-    checkLogin();
-  }, []);
+    // Check initial auth state
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        // User is signed in
+        if (segments[0] !== '(tabs)') {
+          router.replace('/(tabs)');
+        }
+      } else {
+        // No session: go to login on initial load
+        if (segments[0] !== 'login' && segments[0] !== 'register') {
+          router.replace('/login');
+        }
+      }
+      setIsLoading(false);
+    });
 
-  if (!loaded || isLoggedIn === null) {
-    return null; // ou um splash/loading
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN') {
+        router.replace('/(tabs)');
+      } else if (event === 'SIGNED_OUT') {
+        router.replace('/login');
+      }
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, [segments]);
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
   }
 
-  return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        {isLoggedIn ? (
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        ) : (
-          <Stack.Screen name="login" options={{ headerShown: false }} />
-        )}
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
-  );
+  return <Slot />;
 }

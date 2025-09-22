@@ -7,14 +7,12 @@
     "icon": "./assets/images/icon.png",
     "scheme": "appdefinitiva",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.mimero.appdefinitiva",
       "buildNumber": "1.0.0",
       "infoPlist": {
         "NSMotionUsageDescription": "This app requires access to motion sensors for enhanced user experience.",
-        "UIBackgroundModes": [],
         "UIViewControllerBasedStatusBarAppearance": true,
         "UIRequiresFullScreen": true
       },
@@ -27,7 +25,9 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "permissions": ["ACTIVITY_RECOGNITION"],
+      "permissions": [
+        "ACTIVITY_RECOGNITION"
+      ],
       "edgeToEdgeEnabled": true,
       "package": "com.mimero.appdefinitiva"
     },
@@ -45,12 +45,6 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
-        }
-      ],
-      [
-        "expo-sensors",
-        {
-          "motionPermission": "This app requires access to motion sensors for enhanced user experience."
         }
       ]
     ],

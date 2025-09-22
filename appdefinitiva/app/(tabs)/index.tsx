@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import { Image } from 'expo-image';
 import {
   Platform,
@@ -11,13 +11,17 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  useColorScheme,
+  Vibration,
+  Dimensions
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
-import {Provider as PaperProvider, MD3LightTheme, MD3DarkTheme} from 'react-native-paper';
-import { useColorScheme } from "react-native";
+import { Provider as PaperProvider, MD3LightTheme, MD3DarkTheme } from 'react-native-paper';
+import * as Pedometer from 'expo-sensors/build/Pedometer';
+import { Circle, Svg } from 'react-native-svg';
 
 type Exercise = {
   id: string;
@@ -42,16 +46,130 @@ const STORAGE_KEY = 'workouts';
 
 export default function HomeScreen() {
   const router = useRouter();
-const scheme = useColorScheme();
+  const scheme = useColorScheme();
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [expandedName, setExpandedName] = useState<string | null>(null);
   const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null);
-
-
-  // Valor fixo para os passos (sem simulação)
-  const steps = 0;
+  
+  // Step counter state
+  const [isPedometerAvailable, setIsPedometerAvailable] = useState('checking');
+  const [currentStepCount, setCurrentStepCount] = useState(0);
   const STEP_TARGET = 10000;
-  const progress = Math.min(1, steps / STEP_TARGET);
+  const [progress, setProgress] = useState(0);
+  const [subscription, setSubscription] = useState<any>(null);
+  // Keep the first step value seen by watchStepCount to compute deltas (Android)
+  const initialWatchStepsRef = useRef<number | null>(null);
+  
+  // Load saved steps on mount
+  useEffect(() => {
+    loadStepCount();
+  }, []);
+  
+  // Update progress when step count changes
+  useEffect(() => {
+    const newProgress = Math.min(1, currentStepCount / STEP_TARGET);
+    setProgress(newProgress);
+    saveStepCount(currentStepCount);
+  }, [currentStepCount, STEP_TARGET]);
+  
+  // Handle pedometer subscription
+  useEffect(() => {
+    let isMounted = true;
+    let baseAtStart = currentStepCount; // baseline to add deltas on Android
+
+    const subscribe = async () => {
+      try {
+        const isAvailable = await Pedometer.isAvailableAsync();
+        if (!isMounted) return;
+
+        setIsPedometerAvailable(String(isAvailable));
+
+        if (isAvailable) {
+          const end = new Date();
+          const start = new Date();
+          // Count from today (midnight) instead of last 24h
+          start.setHours(0, 0, 0, 0);
+
+          // On iOS, try to fetch steps since midnight. On Android this API is not supported.
+          if (Platform.OS === 'ios') {
+            try {
+              const pastStepCount = await Pedometer.getStepCountAsync(start, end);
+              if (isMounted && pastStepCount) {
+                baseAtStart = pastStepCount.steps;
+                setCurrentStepCount(prev => Math.max(prev, baseAtStart));
+              }
+            } catch (error) {
+              console.error('Error getting step count:', error);
+            }
+          }
+
+          // Subscribe to step counter updates (works on both iOS and Android)
+          const sub = Pedometer.watchStepCount(result => {
+            if (!isMounted) return;
+            if (initialWatchStepsRef.current === null) {
+              initialWatchStepsRef.current = result.steps;
+            }
+            const delta = Math.max(0, result.steps - (initialWatchStepsRef.current ?? 0));
+            const total = baseAtStart + delta;
+            setCurrentStepCount(prev => (total > prev ? total : prev));
+          });
+
+          setSubscription(sub);
+        }
+      } catch (error) {
+        console.error('Error initializing pedometer:', error);
+      }
+    };
+
+    subscribe();
+
+    return () => {
+      isMounted = false;
+      if (subscription && subscription.remove) {
+        subscription.remove();
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  
+  // Load saved step count from storage
+  const loadStepCount = async () => {
+    try {
+      const savedSteps = await AsyncStorage.getItem('@step_count');
+      if (savedSteps !== null) {
+        setCurrentStepCount(parseInt(savedSteps, 10));
+      }
+    } catch (error) {
+      console.error('Error loading step count:', error);
+    }
+  };
+  
+  // Save step count to storage
+  const saveStepCount = async (steps: number) => {
+    try {
+      await AsyncStorage.setItem('@step_count', steps.toString());
+    } catch (error) {
+      console.error('Error saving step count:', error);
+    }
+  };
+  
+  // Reset step counter
+  const resetSteps = async () => {
+    try {
+      await AsyncStorage.removeItem('@step_count');
+      setCurrentStepCount(0);
+    } catch (error) {
+      console.error('Error resetting steps:', error);
+    }
+  };
+  
+  // Format number with thousands separator
+  const formatNumber = (num: number) => {
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  };
+  
+  // Calculate remaining steps to reach goal
+  const remainingSteps = Math.max(0, STEP_TARGET - currentStepCount);
   const lightTheme = {
     ...MD3LightTheme,
     colors: {
@@ -61,6 +179,9 @@ const scheme = useColorScheme();
       background: '#f9f9f9',
       surface: '#ffffff',
       text: '#1C1C1C',
+      success: '#4CAF50',
+      warning: '#FFC107',
+      error: '#F44336',
     },
   };
 
@@ -73,8 +194,20 @@ const scheme = useColorScheme();
       background: '#121212',
       surface: '#1e1e1e',
       text: '#ffffff',
+      success: '#66BB6A',
+      warning: '#FFD54F',
+      error: '#EF5350',
     },
   };
+  
+  // Force light theme on this screen to keep UI bright and clean
+  const theme = lightTheme;
+  const { width } = Dimensions.get('window');
+  const size = width - 60;
+  const strokeWidth = 20;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const strokeDashoffset = circumference - progress * circumference;
 
   const loadWorkouts = useCallback(async () => {
     try {
@@ -203,22 +336,19 @@ const scheme = useColorScheme();
 
   return (
 
-      <PaperProvider theme={scheme === "dark" ? darkTheme : lightTheme}>
-      {/* resto da tua app */}
-    
-    
-    <View style={styles.container}>
+      <PaperProvider theme={theme}>
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <Text style={styles.title}>Fitness Hub</Text>
           <Text style={styles.subtitle}>
-            {steps} steps • target {STEP_TARGET.toLocaleString()}
+            {currentStepCount} steps • target {STEP_TARGET.toLocaleString()}
           </Text>
         </View>
         <Pressable onPress={handleLogout} hitSlop={20}>
           <Image
-            source={require('@/assets/images/Settings-Icon.png')}
+            source={require('../../assets/images/Settings-Icon.png')}
             style={styles.settingsIcon}
           />
         </Pressable>
@@ -239,20 +369,30 @@ const scheme = useColorScheme();
             />
           </View>
           <View style={styles.progressCenter}>
-            <Text style={styles.progressNumber}>
-              {steps.toLocaleString()}
+            <Text style={[styles.progressNumber, { color: theme.colors.text }]}>
+              {currentStepCount.toLocaleString()}
             </Text>
-            <Text style={styles.progressLabel}>steps today</Text>
+            <Text style={[styles.progressLabel, { color: theme.colors.text }]}>
+              steps today
+            </Text>
           </View>
         </View>
         <View style={styles.progressStats}>
           <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{Math.round(progress * 100)}%</Text>
-            <Text style={styles.statLabel}>Goal</Text>
+            <Text style={[styles.statNumber, { color: theme.colors.primary }]}>
+              {Math.round(progress * 100)}%
+            </Text>
+            <Text style={[styles.statLabel, { color: theme.colors.text }]}>
+              Goal
+            </Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{STEP_TARGET - steps}</Text>
-            <Text style={styles.statLabel}>Remaining</Text>
+            <Text style={[styles.statNumber, { color: theme.colors.primary }]}>
+              {Math.max(0, STEP_TARGET - currentStepCount)}
+            </Text>
+            <Text style={[styles.statLabel, { color: theme.colors.text }]}>
+              remaining
+            </Text>
           </View>
         </View>
       </View>
