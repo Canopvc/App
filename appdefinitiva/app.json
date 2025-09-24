@@ -26,7 +26,9 @@
         "backgroundColor": "#ffffff"
       },
       "permissions": [
-        "ACTIVITY_RECOGNITION"
+        "ACTIVITY_RECOGNITION",
+        "POST_NOTIFICATIONS",
+        "VIBRATE"
       ],
       "edgeToEdgeEnabled": true,
       "package": "com.mimero.appdefinitiva"
@@ -46,7 +48,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true

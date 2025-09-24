@@ -14,10 +14,12 @@ import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabase';
 import { useRouter } from 'expo-router';
+import { useTheme } from 'react-native-paper';
 
 const WEIGHT_GOALS_KEY = 'weightGoals';
 
 export default function ProfileScreen() {
+  const theme = useTheme();
   const [userId, setUserId] = useState('');
   const [email, setEmail] = useState('');
   const [newEmail, setNewEmail] = useState('');
@@ -145,7 +147,7 @@ export default function ProfileScreen() {
   // Skeleton loading
   if (busy) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.headerSkeleton} />
         <View style={styles.avatarSkeleton} />
         <View style={styles.lineSkeleton} />
@@ -157,21 +159,21 @@ export default function ProfileScreen() {
   const weightDifference = calculateWeightDifference();
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: '#1a1a1a' }]}> 
-        <Text style={styles.title}>Profile</Text>
+      <View style={[styles.header, { backgroundColor: theme.colors.surface }]}> 
+        <Text style={[styles.title, { color: theme.colors.onSurface }]}>Profile</Text>
         <Pressable onPress={handleLogout} hitSlop={20}>
           <Image
             source={require('@/assets/images/Settings-Icon.png')}
-            style={styles.settingsIcon}
+            style={[styles.settingsIcon, { tintColor: theme.colors.onSurface }]}
           />
         </Pressable>
       </View>
 
       {/* Avatar & info */}
       <View style={styles.profileSection}>
-        <View style={[styles.avatarRing, { backgroundColor: '#0072ff' }]}> 
+        <View style={[styles.avatarRing, { backgroundColor: theme.colors.primary }]}> 
           <View style={styles.avatarRing}>
             <Image
               source={require('@/assets/images/LoginImage.png')}
@@ -181,61 +183,64 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <Text style={styles.username}>{username}</Text>
-        <Text style={styles.email}>{email}</Text>
+        <Text style={[styles.username, { color: theme.colors.onBackground }]}>{username}</Text>
+        <Text style={[styles.email, { color: theme.colors.onSurfaceVariant ?? theme.colors.onSurface }]}>{email}</Text>
       </View>
 
       {/* Weight Goals Section */}
       <View style={styles.goalsSection}>
-        <Text style={styles.sectionTitle}>Weight Goals</Text>
+        <Text style={[styles.sectionTitle, { color: theme.colors.onBackground }]}>Weight Goals</Text>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Current Weight (kg)</Text>
+          <Text style={[styles.label, { color: theme.colors.onSurface }]}>Current Weight (kg)</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: theme.colors.surface, color: theme.colors.onSurface, borderColor: theme.colors.outline }]}
             value={weight}
             onChangeText={setWeight}
             keyboardType="numeric"
             placeholder="80.0"
+            placeholderTextColor={theme.colors.onSurfaceVariant ?? theme.colors.onSurface}
           />
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Target Weight (kg)</Text>
+          <Text style={[styles.label, { color: theme.colors.onSurface }]}>Target Weight (kg)</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: theme.colors.surface, color: theme.colors.onSurface, borderColor: theme.colors.outline }]}
             value={weightGoal}
             onChangeText={setWeightGoal}
             keyboardType="numeric"
             placeholder="65.0"
+            placeholderTextColor={theme.colors.onSurfaceVariant ?? theme.colors.onSurface}
           />
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Target Date</Text>
+          <Text style={[styles.label, { color: theme.colors.onSurface }]}>Target Date</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: theme.colors.surface, color: theme.colors.onSurface, borderColor: theme.colors.outline }]}
             value={targetDate}
             onChangeText={setTargetDate}
             placeholder="2025-01-01"
+            placeholderTextColor={theme.colors.onSurfaceVariant ?? theme.colors.onSurface}
           />
         </View>
 
         {/* Progress Display */}
         {(weight && weightGoal) && (
-          <View style={styles.progressCard}>
-            <Text style={styles.progressTitle}>Progress</Text>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${progressPercentage}%` }]} />
+          <View style={[styles.progressCard, { backgroundColor: theme.colors.surface }]}>
+            <Text style={[styles.progressTitle, { color: theme.colors.onSurface }]}>Progress</Text>
+            <View style={[styles.progressBar, { backgroundColor: theme.colors.outline }]}>
+              <View style={[styles.progressFill, { width: `${progressPercentage}%`, backgroundColor: theme.colors.primary }]} />
             </View>
-            <Text style={styles.progressText}>
+            <Text style={[styles.progressText, { color: theme.colors.onSurfaceVariant ?? theme.colors.onSurface }]}>
               {weightDifference.toFixed(1)}kg to go • {progressPercentage.toFixed(1)}% complete
             </Text>
           </View>
         )}
 
         <Pressable 
-          style={[styles.button, (!weight || !weightGoal) && styles.disabled]} 
+          style={[styles.button, { backgroundColor: theme.colors.primary }, (!weight || !weightGoal) && styles.disabled]} 
           onPress={saveWeightGoals}
           disabled={!weight || !weightGoal}
         >
@@ -247,15 +252,15 @@ export default function ProfileScreen() {
       <View style={styles.form}>
         <TextInput
           placeholder="New email address"
-          placeholderTextColor="#888"
+          placeholderTextColor={theme.colors.onSurfaceVariant ?? theme.colors.onSurface}
           value={newEmail}
           onChangeText={setNewEmail}
           autoCapitalize="none"
           keyboardType="email-address"
-          style={styles.input}
+          style={[styles.input, { backgroundColor: theme.colors.surface, color: theme.colors.onSurface, borderColor: theme.colors.outline }]}
         />
         <Pressable
-          style={[styles.button, !newEmail.trim() && styles.disabled]}
+          style={[styles.button, { backgroundColor: theme.colors.primary }, !newEmail.trim() && styles.disabled]}
           onPress={handleUpdateEmail}
           disabled={!newEmail.trim() || loading}
         >
@@ -274,7 +279,7 @@ export default function ProfileScreen() {
 const skeleton = { backgroundColor: '#e5e5e5', borderRadius: 12 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1 },
 
   header: {
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
@@ -283,11 +288,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#1a1a1a',
   },
   headerSkeleton: { height: 120, ...skeleton, borderRadius: 0 },
-  title: { color: '#fff', fontSize: 28, fontWeight: '700' },
-  settingsIcon: { width: 32, height: 32, tintColor: '#fff' },
+  title: { fontSize: 28, fontWeight: '700' },
+  settingsIcon: { width: 32, height: 32 },
 
   profileSection: { alignItems: 'center', marginTop: -40 },
   avatarRing: {
@@ -302,7 +306,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 6,
-    backgroundColor: '#0072ff',
   },
   avatar: { width: 116, height: 116, borderRadius: 58 },
   avatarSkeleton: {
@@ -312,8 +315,8 @@ const styles = StyleSheet.create({
     marginTop: 20,
     ...skeleton,
   },
-  username: { fontSize: 26, fontWeight: '700', marginTop: 12, color: '#111' },
-  email: { fontSize: 16, color: '#555', marginTop: 4 },
+  username: { fontSize: 26, fontWeight: '700', marginTop: 12 },
+  email: { fontSize: 16, marginTop: 4 },
 
   lineSkeleton: {
     height: 20,
@@ -324,79 +327,23 @@ const styles = StyleSheet.create({
   },
 
   form: { paddingHorizontal: 24, marginTop: 36 },
-  input: {
-    backgroundColor: '#f4f5f7',
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    borderRadius: 12,
-    fontSize: 16,
-    color: '#000',
-    borderWidth: 1.2,
-    borderColor: '#e3e3e3',
-  },
-  button: {
-    marginTop: 16,
-    backgroundColor: '#0072ff',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    shadowColor: '#0072ff',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  disabled: { backgroundColor: '#b3d4ff' },
+  input: { paddingVertical: 14, paddingHorizontal: 18, borderRadius: 12, fontSize: 16, borderWidth: 1.2 },
+  button: { marginTop: 16, paddingVertical: 14, borderRadius: 12, alignItems: 'center', shadowColor: '#0072ff', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
+  disabled: { opacity: 0.6 },
   buttonTxt: { color: '#fff', fontSize: 16, fontWeight: '600' },
   
   goalsSection: {
     paddingHorizontal: 24,
     marginTop: 24,
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#111',
-    marginBottom: 16,
-  },
+  sectionTitle: { fontSize: 20, fontWeight: '700', marginBottom: 16 },
   inputGroup: {
     marginBottom: 16,
   },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#555',
-    marginBottom: 8,
-  },
-  progressCard: {
-    backgroundColor: '#f8f9fa',
-    padding: 16,
-    borderRadius: 12,
-    marginTop: 16,
-    marginBottom: 16,
-  },
-  progressTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111',
-    marginBottom: 8,
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: '#e9ecef',
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginVertical: 8,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#0072ff',
-    borderRadius: 4,
-  },
-  progressText: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 8,
-  },
+  label: { fontSize: 14, fontWeight: '600', marginBottom: 8 },
+  progressCard: { padding: 16, borderRadius: 12, marginTop: 16, marginBottom: 16 },
+  progressTitle: { fontSize: 16, fontWeight: '600', marginBottom: 8 },
+  progressBar: { height: 8, borderRadius: 4, overflow: 'hidden', marginVertical: 8 },
+  progressFill: { height: '100%', borderRadius: 4 },
+  progressText: { fontSize: 14, textAlign: 'center', marginTop: 8 },
 });

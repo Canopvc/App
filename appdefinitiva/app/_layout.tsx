@@ -1,19 +1,23 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { supabase } from "../lib/supabase";
-import { View, ActivityIndicator } from "react-native";
+import { View, ActivityIndicator, useColorScheme } from "react-native";
+import { Provider as PaperProvider, useTheme } from 'react-native-paper';
+import { getAppTheme } from "../lib/theme";
 
 export default function RootLayout() {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const segments = useSegments();
+  const scheme = useColorScheme();
 
   useEffect(() => {
     // Check initial auth state
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         // User is signed in
-        if (segments[0] !== '(tabs)') {
+        // Allow tabs and workout detail routes
+        if (segments[0] !== '(tabs)' && segments[0] !== 'workout') {
           router.replace('/(tabs)');
         }
       } else {
@@ -28,7 +32,10 @@ export default function RootLayout() {
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN') {
-        router.replace('/(tabs)');
+        // Allow tabs and workout detail routes
+        if (segments[0] !== '(tabs)' && segments[0] !== 'workout') {
+          router.replace('/(tabs)');
+        }
       } else if (event === 'SIGNED_OUT') {
         router.replace('/login');
       }
@@ -39,13 +46,21 @@ export default function RootLayout() {
     };
   }, [segments]);
 
+  const theme = getAppTheme(scheme);
+
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" />
-      </View>
+      <PaperProvider theme={theme}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background }}>
+          <ActivityIndicator size="large" />
+        </View>
+      </PaperProvider>
     );
   }
 
-  return <Slot />;
+  return (
+    <PaperProvider theme={theme}>
+      <Slot />
+    </PaperProvider>
+  );
 }

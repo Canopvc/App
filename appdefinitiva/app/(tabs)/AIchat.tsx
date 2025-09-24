@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, ActivityIndicator, ScrollView, Alert, TouchableOpacity, Modal } from 'react-native';
+import { useTheme } from 'react-native-paper';
 import axios from 'axios';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -44,6 +45,7 @@ function uid(prefix = '') {
 }
 
 export default function App() {
+  const theme = useTheme();
   const [prompt, setPrompt] = useState('');
   const [messages, setMessages] = useState<MessageType[]>([]);
   const [loading, setLoading] = useState(false);
@@ -135,7 +137,33 @@ export default function App() {
     try {
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
       
-      const systemInstruction = `Você é um assistente virtual especializado em fitness. ...`;
+      const systemInstruction = `Você é um assistente virtual de fitness. Siga estas regras SEMPRE:
+
+1) Quando o usuário pedir um treino, plano de treino, rotina, programa, ou algo que envolva exercícios, ALÉM das explicações, forneça ao final um bloco ESTRUTURADO em português exatamente neste formato (sem usar markdown ou blocos de código):
+
+Treino: <nome do treino>
+Exercício: <nome do exercício>
+Séries: <número inteiro>
+Repetições: <número inteiro>
+Peso: <número inteiro em kg, 0 se não se aplica>
+Duração: <número inteiro em minutos, 0 se não se aplica>
+Tipo: <weightlifting|calisthenics|cardio>
+
+Exercício: <nome do exercício 2>
+Séries: <número inteiro>
+Repetições: <número inteiro>
+Peso: <número inteiro em kg, 0 se não se aplica>
+Duração: <número inteiro em minutos, 0 se não se aplica>
+Tipo: <weightlifting|calisthenics|cardio>
+
+… (repita para todos os exercícios)
+
+2) Use exatamente estes rótulos com acentos e pontuação: "Treino:", "Exercício:", "Séries:", "Repetições:", "Peso:", "Duração:", "Tipo:".
+3) Sempre inclua as linhas "Séries:" e "Repetições:" (use 0 se não se aplica). "Peso:" e "Duração:" também devem estar presentes, com 0 quando não se aplicarem.
+4) O campo "Tipo:" DEVE ser exatamente um destes valores em minúsculas: weightlifting, calisthenics, cardio.
+5) Não envolva o bloco estruturado em listas, markdown, ou código. Apenas texto puro como mostrado acima.
+6) Se o usuário NÃO estiver pedindo um plano/treino, responda normalmente sem incluir o bloco estruturado.
+7) Seja conciso nas explicações antes do bloco estruturado.`;
 
       const conversationHistory = messages.slice(-10).map(msg => ({
         role: msg.isUser ? 'user' : 'model',
@@ -221,7 +249,8 @@ export default function App() {
           
           <View style={styles.messageBubble}>
             <Text style={[
-              styles.messageText, 
+              styles.messageText,
+              { color: theme.colors.onSurface },
               msg.isUser ? styles.userMessageText : styles.geminiMessageText
             ]}>
               {msg.text}
@@ -250,18 +279,19 @@ export default function App() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>💪 Gemini Fitness Chat</Text>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <Text style={[styles.title, { color: theme.colors.onBackground }]}>💪 Gemini Fitness Chat</Text>
       
       <ScrollView style={styles.messagesContainer} contentContainerStyle={{ paddingBottom: 20 }}>
         {renderMessages()}
-        {loading && <ActivityIndicator style={styles.loading} size="large" color="#9333ea" />}
+        {loading && <ActivityIndicator style={styles.loading} size="large" color={theme.colors.primary} />}
       </ScrollView>
 
-      <View style={styles.inputContainer}>
+      <View style={[styles.inputContainer, { backgroundColor: theme.colors.surface, borderColor: theme.colors.outline, borderWidth: 1 }] }>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { color: theme.colors.onSurface }]}
           placeholder="Pergunte sobre exercícios..."
+          placeholderTextColor={theme.colors.onSurfaceVariant ?? theme.colors.onSurface}
           value={prompt}
           onChangeText={setPrompt}
           multiline
@@ -271,27 +301,28 @@ export default function App() {
           style={styles.sendButton}
           disabled={loading}
         >
-          <MaterialCommunityIcons name="send-circle" size={40} color="#0ea5e9" />
+          <MaterialCommunityIcons name="send-circle" size={40} color={theme.colors.primary} />
         </TouchableOpacity>
       </View>
 
       <Modal visible={!!selectedWorkout} animationType="slide" transparent={true}>
         <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Salvar Treino</Text>
+          <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
+            <Text style={[styles.modalTitle, { color: theme.colors.onSurface }]}>Salvar Treino</Text>
             
-            <Text style={styles.label}>Nome do Treino</Text>
+            <Text style={[styles.label, { color: theme.colors.onSurface }]}>Nome do Treino</Text>
             <TextInput
-              style={styles.modalInput}
+              style={[styles.modalInput, { backgroundColor: theme.colors.surface, color: theme.colors.onSurface, borderColor: theme.colors.outline }]}
               value={workoutName}
               onChangeText={setWorkoutName}
               placeholder="Ex: Treino de Peito"
+              placeholderTextColor={theme.colors.onSurfaceVariant ?? theme.colors.onSurface}
             />
 
-            <Text style={styles.label}>Exercícios incluídos:</Text>
+            <Text style={[styles.label, { color: theme.colors.onSurface }]}>Exercícios incluídos:</Text>
             <ScrollView style={styles.exercisesList}>
               {selectedWorkout?.exercises.map((exercise, index) => (
-                <Text key={index} style={styles.exerciseText}>
+                <Text key={index} style={[styles.exerciseText, { color: theme.colors.onSurface }] }>
                   • {exercise.name} ({exercise.sets} séries de {exercise.reps} reps)
                 </Text>
               ))}
@@ -306,7 +337,7 @@ export default function App() {
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={[styles.modalButton, styles.saveButton]}
+                style={[styles.modalButton, [styles.saveButton, { backgroundColor: theme.colors.primary }]]}
                 onPress={handleSaveWorkout}
                 disabled={savingWorkout}
               >
@@ -325,18 +356,12 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fafafa',
-    padding: 20,
-    paddingTop: 50,
-  },
+  container: { flex: 1, padding: 20, paddingTop: 50 },
   title: {
     fontSize: 26,
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 15,
-    color: '#0f172a',
   },
   messagesContainer: {
     flex: 1,
@@ -352,14 +377,8 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  userMessage: {
-    backgroundColor: '#e0f2fe',
-    alignSelf: 'flex-end',
-  },
-  geminiMessage: {
-    backgroundColor: '#f3e8ff',
-    alignSelf: 'flex-start',
-  },
+  userMessage: { alignSelf: 'flex-end', backgroundColor: 'rgba(14,165,233,0.12)' },
+  geminiMessage: { alignSelf: 'flex-start', backgroundColor: 'rgba(147,51,234,0.12)' },
   messageBubble: {
     flexShrink: 1,
     marginLeft: 8,
@@ -368,27 +387,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 22,
   },
-  userMessageText: {
-    color: '#0f172a',
-  },
-  geminiMessageText: {
-    color: '#0f172a',
-  },
+  userMessageText: {},
+  geminiMessageText: {},
   timestamp: {
     fontSize: 12,
     color: '#64748b',
     paddingTop: 5,
     alignSelf: 'flex-end',
   },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f1f5f9',
-    borderRadius: 30,
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    marginTop: 8,
-  },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', borderRadius: 30, paddingHorizontal: 15, paddingVertical: 8, marginTop: 8 },
   input: {
     flex: 1,
     fontSize: 16,
@@ -400,17 +407,7 @@ const styles = StyleSheet.create({
   loading: {
     marginVertical: 10,
   },
-  saveWorkoutButton: {
-    backgroundColor: '#22c55e',
-    padding: 10,
-    borderRadius: 10,
-    marginVertical: 5,
-    alignSelf: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
+  saveWorkoutButton: { backgroundColor: '#22c55e', padding: 10, borderRadius: 10, marginVertical: 5, alignSelf: 'center', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 3, elevation: 2 },
   saveWorkoutButtonText: {
     color: 'white',
     fontWeight: 'bold',
@@ -421,33 +418,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
-  modalContent: {
-    backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 16,
-    width: '90%',
-    maxHeight: '80%',
-  },
+  modalContent: { padding: 20, borderRadius: 16, width: '90%', maxHeight: '80%' },
   modalTitle: {
     fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 15,
     textAlign: 'center',
-    color: '#0f172a',
   },
   label: {
     fontSize: 16,
     marginBottom: 5,
     fontWeight: '600',
-    color: '#475569',
   },
   modalInput: {
     borderWidth: 1,
-    borderColor: '#cbd5e1',
     padding: 12,
     borderRadius: 10,
     marginBottom: 15,
-    backgroundColor: '#f8fafc',
   },
   exercisesList: {
     maxHeight: 150,
@@ -456,7 +443,6 @@ const styles = StyleSheet.create({
   exerciseText: {
     fontSize: 15,
     marginBottom: 4,
-    color: '#1e293b',
   },
   modalButtons: {
     flexDirection: 'row',

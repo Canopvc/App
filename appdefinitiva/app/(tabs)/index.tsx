@@ -19,7 +19,7 @@ import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
-import { Provider as PaperProvider, MD3LightTheme, MD3DarkTheme } from 'react-native-paper';
+import { useTheme } from 'react-native-paper';
 import * as Pedometer from 'expo-sensors/build/Pedometer';
 import { Circle, Svg } from 'react-native-svg';
 
@@ -43,6 +43,10 @@ type Workout = {
 };
 
 const STORAGE_KEY = 'workouts';
+
+// Helper to create a stable slug for navigation based on name + createdAt
+const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+const workoutSlugFromFields = (name: string, createdAt: string) => `${slugify(name)}-${new Date(createdAt).getTime()}`;
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -170,38 +174,7 @@ export default function HomeScreen() {
   
   // Calculate remaining steps to reach goal
   const remainingSteps = Math.max(0, STEP_TARGET - currentStepCount);
-  const lightTheme = {
-    ...MD3LightTheme,
-    colors: {
-      ...MD3LightTheme.colors,
-      primary: '#6c63FF',
-      secondary: '#3d5afe',
-      background: '#f9f9f9',
-      surface: '#ffffff',
-      text: '#1C1C1C',
-      success: '#4CAF50',
-      warning: '#FFC107',
-      error: '#F44336',
-    },
-  };
-
-  const darkTheme = {
-    ...MD3DarkTheme,
-    colors: {
-      ...MD3DarkTheme.colors,
-      primary: '#6c63FF',
-      secondary: '#3d5afe',
-      background: '#121212',
-      surface: '#1e1e1e',
-      text: '#ffffff',
-      success: '#66BB6A',
-      warning: '#FFD54F',
-      error: '#EF5350',
-    },
-  };
-  
-  // Force light theme on this screen to keep UI bright and clean
-  const theme = lightTheme;
+  const theme = useTheme();
   const { width } = Dimensions.get('window');
   const size = width - 60;
   const strokeWidth = 20;
@@ -329,20 +302,19 @@ export default function HomeScreen() {
   };
 
   const renderEmpty = () => (
-    <Text style={{ textAlign: 'center', marginTop: 20 }}>
+    <Text style={{ textAlign: 'center', marginTop: 20, color : theme.colors.onSurface }}>
       No workouts saved
     </Text>
   );
 
   return (
 
-      <PaperProvider theme={theme}>
         <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: theme.colors.surface }]}>
         <View style={styles.headerContent}>
-          <Text style={styles.title}>Fitness Hub</Text>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.title, { color: theme.colors.onSurface }]}>Fitness Hub</Text>
+          <Text style={[styles.subtitle, { color: theme.colors.onSurfaceVariant ?? theme.colors.onSurface }]}>
             {currentStepCount} steps • target {STEP_TARGET.toLocaleString()}
           </Text>
         </View>
@@ -355,48 +327,41 @@ export default function HomeScreen() {
       </View>
   
       {/* Progress Circle */}
-      <View style={styles.progressContainer}>
+      <View style={[styles.progressContainer, ]}>
         <View style={styles.progressWrap}>
-          <View style={[styles.progressCircle, { backgroundColor: '#f1f5f9' }]}>
+          <View style={[styles.progressCircle, { backgroundColor: theme.dark ? '#000' : '#f1f5f9' }]}>
             <View
               style={[
                 styles.progressFill,
                 {
-                  backgroundColor: '#06b6d4',
+                  backgroundColor: '#000',
                   height: `${progress * 100}%`,
                 },
               ]}
             />
           </View>
           <View style={styles.progressCenter}>
-            <Text style={[styles.progressNumber, { color: theme.colors.text }]}>
+            <Text style={[styles.progressNumber, { color: theme.colors.onBackground }]}>
               {currentStepCount.toLocaleString()}
             </Text>
-            <Text style={[styles.progressLabel, { color: theme.colors.text }]}>
-              steps today
-            </Text>
+            <Text style={[styles.progressLabel, { color: theme.colors.onBackground }]}>steps today</Text>
           </View>
         </View>
-        <View style={styles.progressStats}>
-          <View style={styles.statItem}>
+        <View style={[styles.progressStats, ]}>
+          <View style={[styles.statItem, { backgroundColor: theme.dark ? '#000' : '#fff' }]}>
             <Text style={[styles.statNumber, { color: theme.colors.primary }]}>
               {Math.round(progress * 100)}%
             </Text>
-            <Text style={[styles.statLabel, { color: theme.colors.text }]}>
-              Goal
-            </Text>
+            <Text style={[styles.statLabel, { color: theme.colors.onBackground }]}>Goal</Text>
           </View>
-          <View style={styles.statItem}>
+          <View style={[styles.statItem, { backgroundColor: theme.dark ? '#000' : '#fff' }]}>
             <Text style={[styles.statNumber, { color: theme.colors.primary }]}>
               {Math.max(0, STEP_TARGET - currentStepCount)}
             </Text>
-            <Text style={[styles.statLabel, { color: theme.colors.text }]}>
-              remaining
-            </Text>
+            <Text style={[styles.statLabel, { color: theme.colors.onBackground }]}>remaining</Text>
           </View>
         </View>
       </View>
-  
       {/* Actions */}
       <View style={styles.actionsRow}>
         <TouchableOpacity
@@ -406,195 +371,37 @@ export default function HomeScreen() {
           <Text style={styles.addButtonText}>+ Add New Workout</Text>
         </TouchableOpacity>
       </View>
-  
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Button title="Enviar agora" onPress={sendNotification} />
-        <Button title="Agendar notificação" onPress={scheduleNotification} />
-      </View>
-  
       {/* Workout List */}
       <FlatList
         data={workouts}
-        keyExtractor={(item: any, idx: number) => (item as any).id ?? String(idx)}
+        keyExtractor={(item: Workout, idx: number) =>
+          `${workoutSlugFromFields(item.name, item.createdAt)}`
+        }
         contentContainerStyle={styles.list}
         ListEmptyComponent={renderEmpty}
         renderItem={({ item }) => (
           <View style={styles.itemWrap}>
             <TouchableOpacity
-              style={styles.workoutItem}
-              onPress={() => toggleExpand(item.name)}
+              style={[styles.workoutItem, { backgroundColor: theme.colors.surface, borderColor: theme.colors.outline }]}
+              onPress={() => {
+                const slug = workoutSlugFromFields(item.name, item.createdAt);
+                router.push(`/workout/${slug}`);
+              }}
             >
               <View style={{ flex: 1 }}>
-                <Text style={styles.workoutText}>{item.name}</Text>
-                <Text style={styles.dateText}>
+                <Text style={[styles.workoutText, { color: theme.colors.onSurface }]}>{item.name}</Text>
+                <Text style={[styles.dateText, { color: theme.colors.onSurfaceVariant ?? theme.colors.onSurface }]}>
                   {new Date(item.createdAt).toLocaleDateString()}
                 </Text>
               </View>
-              <Text style={styles.countText}>
+              <Text style={[styles.countText, { color: theme.colors.primary }] }>
                 {item.exercises.length} exercises
               </Text>
             </TouchableOpacity>
-  
-            {expandedName === item.name && editingWorkout && (
-              <View style={styles.editArea}>
-                {/* Workout Name */}
-                <TextInput
-                  style={styles.input}
-                  value={editingWorkout.name}
-                  onChangeText={(t) => updateEditingWorkout('name', t)}
-                  placeholder="Workout name"
-                />
-  
-                {/* Exercises */}
-{editingWorkout.exercises.map((ex, i) => (
-  // @ts-ignore - "key" é válido no React, mas não faz parte de ViewProps
-  <View key={ex.id ?? i} style={styles.exerciseCard}>
-    <View style={styles.exerciseHeader}>
-      <Text style={styles.label}>Exercise {i + 1}</Text>
-      <TouchableOpacity
-        style={styles.deleteButton}
-        onPress={() => deleteExercise(i)}
-      >
-        <Text style={styles.deleteButtonText}>✕</Text>
-      </TouchableOpacity>
-    </View>
-
-    <TextInput
-      style={styles.input}
-      value={ex.name}
-      onChangeText={(t) => updateExercise(i, 'name', t)}
-      placeholder="Exercise name"
-    />
-
-    <View style={styles.row}>
-      <View style={styles.halfInput}>
-        <Text style={styles.label}>Sets</Text>
-        <TextInput
-          style={styles.input}
-          value={String(ex.sets)}
-          keyboardType="numeric"
-          onChangeText={(t) =>
-            updateExercise(i, 'sets', parseInt(t) || 0)
-          }
-        />
-      </View>
-
-      <View style={styles.halfInput}>
-        <Text style={styles.label}>Reps</Text>
-        <TextInput
-          style={styles.input}
-          value={ex.reps?.toString() ?? ''}
-          keyboardType="numeric"
-          onChangeText={(t) =>
-            updateExercise(i, 'reps', parseInt(t) || undefined)
-          }
-        />
-      </View>
-    </View>
-
-    <View style={styles.row}>
-      <View style={styles.halfInput}>
-        <Text style={styles.label}>Weight (kg)</Text>
-        <TextInput
-          style={styles.input}
-          value={ex.weight?.toString() ?? ''}
-          keyboardType="numeric"
-          onChangeText={(t) =>
-            updateExercise(i, 'weight', parseFloat(t) || undefined)
-          }
-        />
-      </View>
-
-      <View style={styles.halfInput}>
-        <Text style={styles.label}>Minutes</Text>
-        <TextInput
-          style={styles.input}
-          value={ex.minutes?.toString() ?? ''}
-          keyboardType="numeric"
-          onChangeText={(t) =>
-            updateExercise(i, 'minutes', parseInt(t) || undefined)
-          }
-        />
-      </View>
-    </View>
-
-    <View style={styles.checkboxRow}>
-      <TouchableOpacity
-        style={[
-          styles.checkbox,
-          ex.dropset && styles.checkboxChecked,
-        ]}
-        onPress={() => updateExercise(i, 'dropset', !ex.dropset)}
-      >
-        <Text
-          style={[
-            styles.checkboxText,
-            ex.dropset && { color: '#fff' },
-          ]}
-        >
-          Dropset
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[
-          styles.checkbox,
-          ex.failure && styles.checkboxChecked,
-        ]}
-        onPress={() => updateExercise(i, 'failure', !ex.failure)}
-      >
-        <Text
-          style={[
-            styles.checkboxText,
-            ex.failure && { color: '#fff' },
-          ]}
-        >
-          Failure
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[
-          styles.checkbox,
-          ex.warmup && styles.checkboxChecked,
-        ]}
-        onPress={() => updateExercise(i, 'warmup', !ex.warmup)}
-      >
-        <Text
-          style={[
-            styles.checkboxText,
-            ex.warmup && { color: '#fff' },
-          ]}
-        >
-          Warmup
-        </Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-))}
-
-<View style={styles.buttonsRow}>
-  <TouchableOpacity
-    style={styles.saveButton}
-    onPress={saveEditingWorkout}
-  >
-    <Text style={styles.saveButtonText}>Save Changes</Text>
-  </TouchableOpacity>
-  <TouchableOpacity
-    style={styles.deleteWorkoutButton}
-    onPress={() => deleteWorkout(item.name)}
-  >
-    <Text style={styles.deleteWorkoutButtonText}>Delete</Text>
-  </TouchableOpacity>
-</View>
-
-              </View>
-            )}
           </View>
         )}
       />
     </View>
-    </PaperProvider>
   );
 }
 
@@ -626,7 +433,7 @@ const styles = StyleSheet.create({
   },
   actionsRow: { padding: 20 },
   addButton: {
-    backgroundColor: '#06b6d4',
+    backgroundColor: '#D1C802',
     paddingVertical: 15,
     paddingHorizontal: 20,
     borderRadius: 12,
@@ -638,7 +445,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   addButtonText: {
-    color: '#fff',
+    color: '#3B3939',
     fontSize: 16,
     fontWeight: '600',
   },
